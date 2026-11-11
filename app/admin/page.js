@@ -249,7 +249,7 @@ export default function AdminPage() {
                 ➕ Add Admin
               </button>
             </div>
-            <AdminTable admins={admins} onRemove={handleRemoveAdmin} />
+            <AdminTable admins={admins} onRemove={handleRemoveAdmin} onLimitUpdated={loadData} />
           </div>
         )}
 

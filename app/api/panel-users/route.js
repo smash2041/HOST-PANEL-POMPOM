@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getAllPanelUsers, createPanelUser, deletePanelUser } from '@/lib/db';
+import { getAllPanelUsers, createPanelUser, deletePanelUser, updatePanelUserLimit } from '@/lib/db';
 
 export async function GET(request) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { username, password, telegram_user_id, name, expires_at } = body;
+    const { username, password, telegram_user_id, name, expires_at, bot_limit } = body;
 
     if (!username || !password || !telegram_user_id) {
       return NextResponse.json(
@@ -40,6 +40,7 @@ export async function POST(request) {
       telegram_user_id: parseInt(telegram_user_id),
       name: name ? String(name).trim() : '',
       expires_at: expires_at || '',
+      bot_limit: parseInt(bot_limit) || 1,
     });
 
     return NextResponse.json({ success: true });
@@ -49,6 +50,31 @@ export async function POST(request) {
       { error: error.message.includes('UNIQUE') ? 'Username already exists' : error.message },
       { status: 400 }
     );
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const session = await getSession(request);
+    if (!session || session.role !== 'owner') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { id, bot_limit } = body;
+
+    if (!id || bot_limit === undefined) {
+      return NextResponse.json(
+        { error: 'id and bot_limit are required' },
+        { status: 400 }
+      );
+    }
+
+    await updatePanelUserLimit(parseInt(id), parseInt(bot_limit));
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Update limit error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 

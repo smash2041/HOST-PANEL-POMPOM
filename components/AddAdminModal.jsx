@@ -6,6 +6,7 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [telegramUserId, setTelegramUserId] = useState('');
+  const [botLimit, setBotLimit] = useState(1);
   const [name, setName] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,7 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
           username: username.trim(),
           password: password.trim(),
           telegram_user_id: parseInt(telegramUserId.trim()),
+          bot_limit: Math.max(1, parseInt(botLimit) || 1),
           name: name.trim(),
           expires_at: expiresAt ? expiresAt.replace('T', ' ') + ':00' : '',
         }),
@@ -35,7 +37,7 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create admin');
 
-      onToast?.(`Admin account created for @${username}! 🎉`, 'success');
+      onToast?.(`Admin account created for @${username} (Limit: ${botLimit} bots)! 🎉`, 'success');
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -85,17 +87,30 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">Telegram User ID *</label>
-            <input
-              type="number"
-              value={telegramUserId}
-              onChange={(e) => setTelegramUserId(e.target.value)}
-              placeholder="e.g. 5288019309"
-              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
-              required
-            />
-            <p className="text-[11px] text-gray-500 mt-1">Is ID se customer ka hosted bot link hoga</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Telegram User ID *</label>
+              <input
+                type="number"
+                value={telegramUserId}
+                onChange={(e) => setTelegramUserId(e.target.value)}
+                placeholder="e.g. 5288019309"
+                className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Bot Limit (Default: 1)</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={botLimit}
+                onChange={(e) => setBotLimit(e.target.value)}
+                placeholder="1"
+                className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm font-bold text-telegram"
+              />
+            </div>
           </div>
 
           <div>
