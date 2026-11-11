@@ -7,11 +7,10 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Check if already logged in
+  // Check in background if already logged in
   useEffect(() => {
     fetch('/api/me', { credentials: 'include' })
       .then((r) => {
@@ -22,7 +21,7 @@ export default function LoginPage() {
         if (user.role === 'owner') router.push('/admin');
         else router.push('/dashboard');
       })
-      .catch(() => setLoading(false));
+      .catch(() => {});
   }, [router]);
 
   const handleSubmit = async (e) => {
@@ -64,17 +63,6 @@ export default function LoginPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-telegram border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 px-4">
       {/* Glow effect */}
@@ -86,7 +74,7 @@ export default function LoginPage() {
           <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-telegram to-telegram-dark text-3xl shadow-lg shadow-telegram/20">
             🤖
           </div>
-          <h1 className="text-3xl font-bold mb-1">
+          <h1 className="text-3xl font-bold mb-1 text-white">
             HOST <span className="text-telegram">POMPOM</span>
           </h1>
           <p className="text-gray-400 text-sm">Bot Hosting Control Panel</p>

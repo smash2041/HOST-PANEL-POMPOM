@@ -40,19 +40,19 @@ export default function DashboardPage() {
         ? allBots
         : allBots.filter((b) => String(b.owner_user_id) === String(me.id));
       setBots(myBots);
+      setLoading(false);
 
-      // Fetch stats for each bot
-      for (const bot of myBots.slice(0, 10)) {
-        try {
-          const stats = await ec2Get(`/bots/${bot.id}/stats`);
-          setBotStats((prev) => ({ ...prev, [bot.id]: stats }));
-        } catch {
-          // Stats not available
-        }
-      }
+      // Fetch stats for each bot in background (non-blocking)
+      Promise.all(
+        myBots.slice(0, 10).map(async (bot) => {
+          try {
+            const stats = await ec2Get(`/bots/${bot.id}/stats`);
+            setBotStats((prev) => ({ ...prev, [bot.id]: stats }));
+          } catch {}
+        })
+      );
     } catch (err) {
       addToast('Failed to load data: ' + err.message, 'error');
-    } finally {
       setLoading(false);
     }
   };

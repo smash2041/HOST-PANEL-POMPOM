@@ -13,15 +13,15 @@ export async function POST(request) {
       );
     }
 
-    const cleanUser = String(username).trim();
+    const cleanUser = String(username).trim().replace(/^@/, '');
     const cleanPass = String(password).trim();
 
     // 1. Check Owner login (via ENV variables)
-    const ownerUser = process.env.OWNER_USERNAME || 'admin';
-    const ownerPass = process.env.OWNER_PASSWORD || 'admin123';
+    const ownerUser = (process.env.OWNER_USERNAME || 'admin').replace(/^@/, '');
+    const ownerPass = (process.env.OWNER_PASSWORD || 'admin123').trim();
     const ownerId = parseInt(process.env.OWNER_ID || '0');
 
-    if (cleanUser === ownerUser && cleanPass === ownerPass) {
+    if (cleanUser.toLowerCase() === ownerUser.toLowerCase() && cleanPass === ownerPass) {
       const token = await createSession({
         id: ownerId,
         username: cleanUser,
