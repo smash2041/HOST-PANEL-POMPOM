@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession, isOwner, COOKIE_NAME } from '@/lib/auth';
-import { isHostingAdmin } from '@/lib/db';
+import { getSession, COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(request) {
   try {
@@ -9,20 +8,14 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const userId = parseInt(session.id);
-    const owner = isOwner(userId);
-    const admin = await isHostingAdmin(userId);
-
-    if (!owner && !admin) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const userId = parseInt(session.id || '0');
+    const role = session.role === 'owner' ? 'owner' : 'admin';
 
     return NextResponse.json({
       id: userId,
-      first_name: session.first_name,
+      first_name: session.name || session.username || 'User',
       username: session.username || '',
-      photo_url: session.photo_url || '',
-      role: owner ? 'owner' : 'admin',
+      role: role,
     });
   } catch (error) {
     console.error('Me error:', error);

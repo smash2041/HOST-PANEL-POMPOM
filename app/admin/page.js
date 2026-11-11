@@ -38,12 +38,14 @@ export default function AdminPage() {
 
       const [botsData, adminsData, statsData] = await Promise.all([
         ec2Get('/bots').catch(() => ({ bots: [] })),
-        ec2Get('/admins').catch(() => ({ admins: [] })),
+        fetch('/api/panel-users', { credentials: 'include' })
+          .then((r) => r.json())
+          .catch(() => ({ users: [] })),
         ec2Get('/stats').catch(() => null),
       ]);
 
       setBots(botsData.bots || []);
-      setAdmins(adminsData.admins || []);
+      setAdmins(adminsData.users || []);
       setStats(statsData);
     } catch (err) {
       addToast('Failed to load data: ' + err.message, 'error');
@@ -90,8 +92,13 @@ export default function AdminPage() {
   };
 
   const handleRemoveAdmin = async (userId) => {
+    if (!confirm('Are you sure you want to delete this admin account?')) return;
     try {
-      await ec2Post(`/admins/${userId}/remove`);
+      const res = await fetch(`/api/panel-users?id=${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete admin');
       addToast('Admin removed', 'success');
       await loadData();
     } catch (err) {

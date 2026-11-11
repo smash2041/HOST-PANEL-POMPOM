@@ -1,50 +1,94 @@
 import { NextResponse } from 'next/server';
-import { verifyTelegramAuth, createSession, isOwner, COOKIE_NAME } from '@/lib/auth';
-import { isHostingAdmin } from '@/lib/db';
+import { createSession, COOKIE_NAME } from '@/lib/auth';
+import { authenticatePanelUser } from '@/lib/db';
 
 export async function POST(request) {
   try {
-    const authData = await request.json();
+    const { username, password } = await request.json();
 
-    // Verify Telegram auth hash
-    if (!verifyTelegramAuth(authData)) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'Invalid authentication data' },
+        { error: 'Username and password are required' },
+        { status: 400 }
+      );
+    }
+
+    const cleanUser = String(username).trim();
+    const cleanPass = String(password).trim();
+
+    // 1. Check Owner login (via ENV variables)
+    const ownerUser = process.env.OWNER_USERNAME || 'admin';
+    const ownerPass = process.env.OWNER_PASSWORD || 'admin123';
+    const ownerId = parseInt(process.env.OWNER_ID || '0');
+
+    if (cleanUser === ownerUser && cleanPass === ownerPass) {
+      const token = await createSession({
+        id: ownerId,
+        username: cleanUser,
+        name: 'Owner',
+        role: 'owner',
+      });
+
+      const response = NextResponse.json({
+        success: true,
+        user: {
+          id: ownerId,
+          username: cleanUser,
+          name: 'Owner',
+          role: 'owner',
+        },
+      });
+
+      response.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+      });
+
+      return response;
+    }
+
+    // 2. Check Customer / Hosting Admin login from Turso DB (panel_users table)
+    const user = await authenticatePanelUser(cleanUser, cleanPass);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid username or password' },
         { status: 401 }
       );
     }
 
-    const userId = parseInt(authData.id);
-    const owner = isOwner(userId);
-    const admin = await isHostingAdmin(userId);
-
-    if (!owner && !admin) {
-      return NextResponse.json(
-        { error: 'Access denied. You are not authorized to use this panel.' },
-        { status: 403 }
-      );
+    // Check expiry if set
+    if (user.expires_at) {
+      const expiry = new Date(user.expires_at).getTime();
+      if (!isNaN(expiry) && expiry < Date.now()) {
+        return NextResponse.json(
+          { error: 'Your account access has expired. Please contact admin.' },
+          { status: 403 }
+        );
+      }
     }
 
-    // Create session
+    // Create session for admin
     const token = await createSession({
-      id: userId,
-      first_name: authData.first_name,
-      username: authData.username || '',
-      photo_url: authData.photo_url || '',
+      id: user.telegram_user_id,
+      username: user.username,
+      name: user.name || user.username,
+      role: 'admin',
     });
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: userId,
-        first_name: authData.first_name,
-        username: authData.username || '',
-        photo_url: authData.photo_url || '',
-        role: owner ? 'owner' : 'admin',
+        id: user.telegram_user_id,
+        username: user.username,
+        name: user.name || user.username,
+        role: 'admin',
       },
     });
 
-    // Set HTTP-only cookie
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -57,7 +101,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Auth error:', error);
     return NextResponse.json(
-      { error: 'Authentication failed' },
+      { error: 'Authentication failed: ' + error.message },
       { status: 500 }
     );
   }

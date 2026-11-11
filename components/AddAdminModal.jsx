@@ -1,26 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { ec2Post } from '@/lib/api';
 
 export default function AddAdminModal({ onClose, onSuccess, onToast }) {
-  const [userId, setUserId] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [telegramUserId, setTelegramUserId] = useState('');
+  const [name, setName] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!userId.trim()) {
-      onToast?.('User ID is required', 'error');
+    if (!username.trim() || !password.trim() || !telegramUserId.trim()) {
+      onToast?.('Username, Password, and Telegram User ID are required', 'error');
       return;
     }
+
     setLoading(true);
     try {
-      const body = { user_id: parseInt(userId.trim()) };
-      if (expiresAt) body.expires_at = expiresAt;
+      const res = await fetch('/api/panel-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password.trim(),
+          telegram_user_id: parseInt(telegramUserId.trim()),
+          name: name.trim(),
+          expires_at: expiresAt ? expiresAt.replace('T', ' ') + ':00' : '',
+        }),
+      });
 
-      await ec2Post('/admins', body);
-      onToast?.('Admin added successfully! ✅', 'success');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create admin');
+
+      onToast?.(`Admin account created for @${username}! 🎉`, 'success');
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -36,58 +51,88 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
         className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-6 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">👤 Add Admin</h2>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <span>👤</span> Create Admin Login
+          </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Telegram User ID *</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Username *</label>
             <input
-              type="number"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="e.g. 123456789"
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-telegram transition-colors text-sm"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. rahul_admin"
+              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Expiry Date (optional)</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Password *</label>
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="e.g. pass@1234"
+              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm font-mono"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Telegram User ID *</label>
+            <input
+              type="number"
+              value={telegramUserId}
+              onChange={(e) => setTelegramUserId(e.target.value)}
+              placeholder="e.g. 5288019309"
+              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
+              required
+            />
+            <p className="text-[11px] text-gray-500 mt-1">Is ID se customer ka hosted bot link hoga</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Customer Name / Note (optional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Rahul Sharma"
+              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Expiry Date (optional)</label>
             <input
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-telegram transition-colors text-sm [color-scheme:dark]"
+              className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm [color-scheme:dark]"
             />
-            <p className="text-xs text-gray-600 mt-1">Leave empty for no expiry</p>
           </div>
 
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 transition-colors text-sm font-medium"
+              className="flex-1 px-4 py-2.5 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 transition-colors text-sm font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-3 bg-telegram text-white rounded-xl hover:bg-telegram-dark transition-colors text-sm font-medium disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-telegram text-white rounded-xl hover:bg-telegram-dark transition-colors text-sm font-medium disabled:opacity-50"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Adding...
-                </span>
-              ) : (
-                '➕ Add Admin'
-              )}
+              {loading ? 'Creating...' : 'Create Login'}
             </button>
           </div>
         </form>
