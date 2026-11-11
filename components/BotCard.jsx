@@ -22,52 +22,86 @@ export default function BotCard({ bot, onAction, isOwner = false }) {
   };
 
   return (
-    <div className={`bg-gray-900/60 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-all animate-fade-in`}>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-telegram/10 flex items-center justify-center text-xl">
-            🤖
+    <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-all animate-fade-in flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-telegram/10 flex items-center justify-center text-xl shrink-0">
+              🤖
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                {bot.bot_username ? (
+                  <a
+                    href={`https://t.me/${bot.bot_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-white hover:text-telegram transition-colors flex items-center gap-1"
+                    title="Open bot in Telegram"
+                  >
+                    @{bot.bot_username}
+                    <span className="text-xs text-gray-500 hover:text-telegram">↗</span>
+                  </a>
+                ) : (
+                  <h3 className="font-semibold text-white">unknown</h3>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 font-mono">ID: {bot.id?.slice(0, 8)}...</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-white">
-              @{bot.bot_username || 'unknown'}
-            </h3>
-            <p className="text-xs text-gray-500">ID: {bot.id?.slice(0, 8)}...</p>
-          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.bg} ${status.border} border ${status.color}`}>
+            {status.label}
+          </span>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.bg} ${status.border} border ${status.color}`}>
-          {status.label}
-        </span>
-      </div>
 
-      {/* Info Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-        <div>
-          <span className="text-gray-500 text-xs">Owner</span>
-          <p className="text-gray-300">{bot.owner_user_id}</p>
-        </div>
-        <div>
-          <span className="text-gray-500 text-xs">Created</span>
-          <p className="text-gray-300">{formatDate(bot.created_at)}</p>
-        </div>
-        <div>
-          <span className="text-gray-500 text-xs">Expires</span>
-          <p className="text-gray-300">{formatDate(bot.expires_at)}</p>
-        </div>
-        {bot.stopped_at && (
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
           <div>
-            <span className="text-gray-500 text-xs">Stopped</span>
-            <p className="text-gray-300">{formatDate(bot.stopped_at)}</p>
+            <span className="text-gray-500 text-xs block mb-0.5">Admin / Creator</span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {bot.admin_username ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-telegram/15 text-telegram font-mono text-xs font-semibold border border-telegram/30" title={`Telegram ID: ${bot.owner_user_id}`}>
+                  👤 @{bot.admin_username}
+                </span>
+              ) : bot.is_owner_bot ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400 font-mono text-xs font-semibold border border-yellow-500/30">
+                  👑 Owner (You)
+                </span>
+              ) : (
+                <span className="text-gray-400 font-mono text-xs bg-gray-800/80 px-2 py-0.5 rounded border border-gray-700/60" title="Telegram User ID">
+                  ID: {bot.owner_user_id}
+                </span>
+              )}
+              {bot.admin_name && (
+                <span className="text-xs text-gray-400 truncate max-w-[80px]" title={bot.admin_name}>
+                  ({bot.admin_name})
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs block mb-0.5">Created</span>
+            <p className="text-gray-300 text-xs font-mono">{formatDate(bot.created_at)}</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs block mb-0.5">Expires</span>
+            <p className="text-gray-300 text-xs font-mono">{formatDate(bot.expires_at)}</p>
+          </div>
+          {bot.stopped_at && (
+            <div>
+              <span className="text-gray-500 text-xs block mb-0.5">Stopped</span>
+              <p className="text-gray-300 text-xs font-mono">{formatDate(bot.stopped_at)}</p>
+            </div>
+          )}
+        </div>
+
+        {bot.stopped_reason && (
+          <div className="mb-4 text-xs text-gray-500 bg-gray-800/50 rounded-lg px-3 py-2">
+            💬 {bot.stopped_reason}
           </div>
         )}
       </div>
-
-      {bot.stopped_reason && (
-        <div className="mb-4 text-xs text-gray-500 bg-gray-800/50 rounded-lg px-3 py-2">
-          💬 {bot.stopped_reason}
-        </div>
-      )}
 
       {/* Actions */}
       {onAction && (

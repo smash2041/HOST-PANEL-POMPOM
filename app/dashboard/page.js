@@ -36,9 +36,14 @@ export default function DashboardPage() {
       const allBots = data.bots || [];
 
       // For non-owner, filter to own bots
-      const myBots = me.role === 'owner'
+      const myBots = (me.role === 'owner'
         ? allBots
-        : allBots.filter((b) => String(b.owner_user_id) === String(me.id));
+        : allBots.filter((b) => String(b.owner_user_id) === String(me.id))
+      ).map((b) => ({
+        ...b,
+        admin_username: me.username,
+        admin_name: me.name,
+      }));
       setBots(myBots);
       setLoading(false);
 

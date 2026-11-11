@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMe, ec2Get, ec2Post } from '@/lib/api';
 import Navbar from '@/components/Navbar';
@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [adminFilter, setAdminFilter] = useState('all');
   const { addToast, ToastContainer } = useToast();
 
   const loadData = useCallback(async () => {
@@ -106,16 +107,58 @@ export default function AdminPage() {
     }
   };
 
-  // Filter bots
-  const filteredBots = bots.filter((bot) => {
-    const matchesSearch =
-      !searchQuery ||
-      bot.bot_username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      String(bot.owner_user_id).includes(searchQuery) ||
-      bot.id?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || bot.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleLimitChanged = (adminId, newLimit) => {
+    setAdmins((prev) =>
+      prev.map((a) => (a.id === adminId ? { ...a, bot_limit: newLimit } : a))
+    );
+    addToast('Bot limit updated!', 'success');
+  };
+
+  // Enrich bots with admin details (username, name, is_owner_bot)
+  const enrichedBots = useMemo(() => {
+    const adminMap = new Map();
+    admins.forEach((admin) => {
+      const tid = String(admin.telegram_user_id || admin.user_id);
+      adminMap.set(tid, admin);
+    });
+
+    return bots.map((bot) => {
+      const ownerIdStr = String(bot.owner_user_id);
+      const admin = adminMap.get(ownerIdStr);
+      const isOwnerBot = String(user?.id) === ownerIdStr;
+
+      return {
+        ...bot,
+        admin_username: admin?.username || null,
+        admin_name: admin?.name || null,
+        is_owner_bot: isOwnerBot,
+      };
+    });
+  }, [bots, admins, user]);
+
+  // Filter bots by search, status, and admin
+  const filteredBots = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+
+    return enrichedBots.filter((bot) => {
+      const matchesSearch =
+        !q ||
+        bot.bot_username?.toLowerCase().includes(q) ||
+        String(bot.owner_user_id).includes(q) ||
+        bot.admin_username?.toLowerCase().includes(q) ||
+        bot.admin_name?.toLowerCase().includes(q) ||
+        bot.id?.toLowerCase().includes(q);
+
+      const matchesStatus = statusFilter === 'all' || bot.status === statusFilter;
+
+      const matchesAdmin =
+        adminFilter === 'all' ||
+        (adminFilter === 'owner' && bot.is_owner_bot) ||
+        String(bot.owner_user_id) === String(adminFilter);
+
+      return matchesSearch && matchesStatus && matchesAdmin;
+    });
+  }, [enrichedBots, searchQuery, statusFilter, adminFilter]);
 
   if (loading) {
     return (
@@ -143,7 +186,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold">👑 Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage all hosted bots and admins</p>
+          <p className="text-gray-500 text-sm mt-1">Manage all hosted bots, admins, and bot permissions</p>
         </div>
 
         {/* Stats Grid */}
@@ -179,23 +222,44 @@ export default function AdminPage() {
         {activeTab === 'bots' && (
           <div className="animate-fade-in">
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex flex-col lg:flex-row gap-3 mb-6">
+              {/* Search input */}
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by username, owner ID, or bot ID..."
+                  placeholder="Search by bot username, admin @username, owner ID..."
                   className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-telegram text-sm"
                 />
                 <svg className="absolute left-3 top-3 w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
+
+              {/* Filter by Admin */}
+              <select
+                value={adminFilter}
+                onChange={(e) => setAdminFilter(e.target.value)}
+                className="px-3.5 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-white text-sm focus:outline-none focus:border-telegram [color-scheme:dark]"
+              >
+                <option value="all">👥 All Admins ({bots.length} bots)</option>
+                <option value="owner">👑 Owner Bots (You)</option>
+                {admins.map((a) => {
+                  const count = bots.filter((b) => String(b.owner_user_id) === String(a.telegram_user_id)).length;
+                  return (
+                    <option key={a.id || a.username} value={String(a.telegram_user_id)}>
+                      👤 @{a.username} {a.name ? `(${a.name})` : ''} ({count} {count === 1 ? 'bot' : 'bots'})
+                    </option>
+                  );
+                })}
+              </select>
+
+              {/* Filter by Status */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-white text-sm focus:outline-none focus:border-telegram [color-scheme:dark]"
+                className="px-3.5 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-white text-sm focus:outline-none focus:border-telegram [color-scheme:dark]"
               >
                 <option value="all">All Status</option>
                 <option value="active">🟢 Active</option>
@@ -203,6 +267,7 @@ export default function AdminPage() {
                 <option value="expired">🟡 Expired</option>
                 <option value="deleted">⚫ Deleted</option>
               </select>
+
               <button
                 onClick={() => setShowHostModal(true)}
                 className="px-5 py-2.5 bg-telegram text-white rounded-xl hover:bg-telegram-dark transition-colors text-sm font-medium whitespace-nowrap"
@@ -211,11 +276,35 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {/* Admin Filter Indicator */}
+            {adminFilter !== 'all' && (
+              <div className="flex items-center gap-2 mb-4 bg-telegram/10 border border-telegram/30 rounded-xl px-4 py-2.5 text-xs text-telegram">
+                <span>
+                  Filtering bots for:{' '}
+                  <strong>
+                    {adminFilter === 'owner'
+                      ? '👑 Owner (You)'
+                      : `@${admins.find((a) => String(a.telegram_user_id) === String(adminFilter))?.username || adminFilter}`}
+                  </strong>
+                </span>
+                <button
+                  onClick={() => setAdminFilter('all')}
+                  className="ml-auto underline hover:text-white"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
+
             {/* Bots Grid */}
             {filteredBots.length === 0 ? (
               <div className="text-center py-16 text-gray-500">
                 <div className="text-5xl mb-3">📭</div>
-                <p>{searchQuery || statusFilter !== 'all' ? 'No bots match your filters' : 'No bots hosted yet'}</p>
+                <p>
+                  {searchQuery || statusFilter !== 'all' || adminFilter !== 'all'
+                    ? 'No bots match your filters'
+                    : 'No bots hosted yet'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -241,7 +330,10 @@ export default function AdminPage() {
         {activeTab === 'admins' && (
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Hosting Admins</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Hosting Admins</h2>
+                <p className="text-xs text-gray-500">Create client accounts, view hosted bots & control creation limits</p>
+              </div>
               <button
                 onClick={() => setShowAdminModal(true)}
                 className="px-5 py-2.5 bg-telegram text-white rounded-xl hover:bg-telegram-dark transition-colors text-sm font-medium"
@@ -249,7 +341,17 @@ export default function AdminPage() {
                 ➕ Add Admin
               </button>
             </div>
-            <AdminTable admins={admins} onRemove={handleRemoveAdmin} onLimitUpdated={loadData} />
+            <AdminTable
+              admins={admins}
+              bots={enrichedBots}
+              onRemove={handleRemoveAdmin}
+              onLimitChanged={handleLimitChanged}
+              onBotAction={handleBotAction}
+              onViewInBotsTab={(telegramId) => {
+                setAdminFilter(String(telegramId));
+                setActiveTab('bots');
+              }}
+            />
           </div>
         )}
 
