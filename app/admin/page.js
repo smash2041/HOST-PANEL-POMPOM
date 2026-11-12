@@ -118,20 +118,25 @@ export default function AdminPage() {
   const enrichedBots = useMemo(() => {
     const adminMap = new Map();
     admins.forEach((admin) => {
-      const tid = String(admin.telegram_user_id || admin.user_id);
-      adminMap.set(tid, admin);
+      const tid = String(admin.telegram_user_id || admin.user_id || '');
+      if (tid && tid !== '0') adminMap.set(tid, admin);
+      if (admin.id) adminMap.set(String(admin.id), admin);
     });
 
     return bots.map((bot) => {
+      const creatorIdStr = String(bot.creator_user_id || bot.owner_user_id);
       const ownerIdStr = String(bot.owner_user_id);
-      const admin = adminMap.get(ownerIdStr);
-      const isOwnerBot = String(user?.id) === ownerIdStr;
+
+      const creatorAdmin = adminMap.get(creatorIdStr);
+      const isOwnerCreator = String(user?.id) === creatorIdStr;
 
       return {
         ...bot,
-        admin_username: admin?.username || null,
-        admin_name: admin?.name || null,
-        is_owner_bot: isOwnerBot,
+        creator_user_id: creatorIdStr,
+        owner_user_id: ownerIdStr,
+        admin_username: creatorAdmin?.username || null,
+        admin_name: creatorAdmin?.name || null,
+        is_owner_bot: isOwnerCreator,
       };
     });
   }, [bots, admins, user]);
@@ -145,6 +150,7 @@ export default function AdminPage() {
         !q ||
         bot.bot_username?.toLowerCase().includes(q) ||
         String(bot.owner_user_id).includes(q) ||
+        String(bot.creator_user_id).includes(q) ||
         bot.admin_username?.toLowerCase().includes(q) ||
         bot.admin_name?.toLowerCase().includes(q) ||
         bot.id?.toLowerCase().includes(q);
@@ -154,6 +160,7 @@ export default function AdminPage() {
       const matchesAdmin =
         adminFilter === 'all' ||
         (adminFilter === 'owner' && bot.is_owner_bot) ||
+        String(bot.creator_user_id) === String(adminFilter) ||
         String(bot.owner_user_id) === String(adminFilter);
 
       return matchesSearch && matchesStatus && matchesAdmin;
@@ -246,7 +253,11 @@ export default function AdminPage() {
                 <option value="all">👥 All Admins ({bots.length} bots)</option>
                 <option value="owner">👑 Owner Bots (You)</option>
                 {admins.map((a) => {
-                  const count = bots.filter((b) => String(b.owner_user_id) === String(a.telegram_user_id)).length;
+                  const count = bots.filter(
+                    (b) =>
+                      String(b.creator_user_id || b.owner_user_id) === String(a.telegram_user_id) ||
+                      String(b.owner_user_id) === String(a.telegram_user_id)
+                  ).length;
                   return (
                     <option key={a.id || a.username} value={String(a.telegram_user_id)}>
                       👤 @{a.username} {a.name ? `(${a.name})` : ''} ({count} {count === 1 ? 'bot' : 'bots'})

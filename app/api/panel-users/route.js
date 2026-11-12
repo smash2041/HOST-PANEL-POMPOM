@@ -27,9 +27,9 @@ export async function POST(request) {
     const body = await request.json();
     const { username, password, telegram_user_id, name, expires_at, bot_limit } = body;
 
-    if (!username || !password || !telegram_user_id) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'Username, password, and Telegram User ID are required' },
+        { error: 'Username and password are required' },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(request) {
     await createPanelUser({
       username: String(username).trim(),
       password: String(password).trim(),
-      telegram_user_id: parseInt(telegram_user_id),
+      telegram_user_id: telegram_user_id ? parseInt(telegram_user_id) : 0,
       name: name ? String(name).trim() : '',
       expires_at: expires_at || '',
       bot_limit: parseInt(bot_limit) || 1,

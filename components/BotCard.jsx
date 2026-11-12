@@ -58,10 +58,10 @@ export default function BotCard({ bot, onAction, isOwner = false }) {
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
           <div>
-            <span className="text-gray-500 text-xs block mb-0.5">Admin / Creator</span>
+            <span className="text-gray-500 text-xs block mb-0.5">Created By (Panel)</span>
             <div className="flex items-center gap-1 flex-wrap">
               {bot.admin_username ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-telegram/15 text-telegram font-mono text-xs font-semibold border border-telegram/30" title={`Telegram ID: ${bot.owner_user_id}`}>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-telegram/15 text-telegram font-mono text-xs font-semibold border border-telegram/30" title={`Creator Telegram ID: ${bot.creator_user_id || bot.owner_user_id}`}>
                   👤 @{bot.admin_username}
                 </span>
               ) : bot.is_owner_bot ? (
@@ -69,8 +69,8 @@ export default function BotCard({ bot, onAction, isOwner = false }) {
                   👑 Owner (You)
                 </span>
               ) : (
-                <span className="text-gray-400 font-mono text-xs bg-gray-800/80 px-2 py-0.5 rounded border border-gray-700/60" title="Telegram User ID">
-                  ID: {bot.owner_user_id}
+                <span className="text-gray-400 font-mono text-xs bg-gray-800/80 px-2 py-0.5 rounded border border-gray-700/60" title="Creator Telegram ID">
+                  ID: {bot.creator_user_id || bot.owner_user_id}
                 </span>
               )}
               {bot.admin_name && (
@@ -80,6 +80,23 @@ export default function BotCard({ bot, onAction, isOwner = false }) {
               )}
             </div>
           </div>
+
+          <div>
+            <span className="text-gray-500 text-xs block mb-0.5">Bot Admin (/admin)</span>
+            <div className="flex items-center gap-1">
+              <span
+                className={`font-mono text-xs px-2 py-0.5 rounded border ${
+                  bot.creator_user_id && String(bot.creator_user_id) !== String(bot.owner_user_id)
+                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/40'
+                    : 'bg-gray-800/80 text-gray-300 border-gray-700/60'
+                }`}
+                title="This Telegram User ID has /admin rights in this bot"
+              >
+                🔑 {bot.owner_user_id}
+              </span>
+            </div>
+          </div>
+
           <div>
             <span className="text-gray-500 text-xs block mb-0.5">Created</span>
             <p className="text-gray-300 text-xs font-mono">{formatDate(bot.created_at)}</p>
@@ -89,7 +106,7 @@ export default function BotCard({ bot, onAction, isOwner = false }) {
             <p className="text-gray-300 text-xs font-mono">{formatDate(bot.expires_at)}</p>
           </div>
           {bot.stopped_at && (
-            <div>
+            <div className="col-span-2">
               <span className="text-gray-500 text-xs block mb-0.5">Stopped</span>
               <p className="text-gray-300 text-xs font-mono">{formatDate(bot.stopped_at)}</p>
             </div>

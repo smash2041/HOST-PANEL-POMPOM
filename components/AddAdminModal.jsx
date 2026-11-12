@@ -13,8 +13,8 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim() || !telegramUserId.trim()) {
-      onToast?.('Username, Password, and Telegram User ID are required', 'error');
+    if (!username.trim() || !password.trim()) {
+      onToast?.('Username and Password are required', 'error');
       return;
     }
 
@@ -27,7 +27,7 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
-          telegram_user_id: parseInt(telegramUserId.trim()),
+          telegram_user_id: telegramUserId.trim() ? parseInt(telegramUserId.trim()) : 0,
           bot_limit: Math.max(1, parseInt(botLimit) || 1),
           name: name.trim(),
           expires_at: expiresAt ? expiresAt.replace('T', ' ') + ':00' : '',
@@ -89,15 +89,19 @@ export default function AddAdminModal({ onClose, onSuccess, onToast }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Telegram User ID *</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1">
+                Telegram User ID <span className="text-gray-500 font-normal">(optional)</span>
+              </label>
               <input
                 type="number"
                 value={telegramUserId}
                 onChange={(e) => setTelegramUserId(e.target.value)}
-                placeholder="e.g. 5288019309"
+                placeholder="Khali chhod sakte ho (optional)"
                 className="w-full px-3.5 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-telegram text-sm"
-                required
               />
+              <p className="text-[11px] text-gray-500 mt-1">
+                Zaroori nahi hai — client bot banate waqt jiski bhi ID daalega, /admin usi ko milega.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Bot Limit (Default: 1)</label>

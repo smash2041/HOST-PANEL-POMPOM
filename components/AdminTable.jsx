@@ -4,8 +4,12 @@ import { useState, useEffect } from 'react';
 
 // Modal displaying all bots created by a specific admin
 function AdminBotsModal({ admin, bots, onClose, onBotAction, onViewInBotsTab }) {
+  const adminTgIdStr = String(admin.telegram_user_id || admin.user_id || '');
+  const adminDbIdStr = String(admin.id || '');
   const adminBots = bots.filter(
-    (b) => String(b.owner_user_id) === String(admin.telegram_user_id || admin.user_id)
+    (b) =>
+      (adminTgIdStr && adminTgIdStr !== '0' && (String(b.creator_user_id || b.creator_id) === adminTgIdStr || String(b.owner_user_id) === adminTgIdStr)) ||
+      (adminDbIdStr && String(b.creator_user_id || b.creator_id) === adminDbIdStr)
   );
 
   return (
@@ -95,6 +99,9 @@ function AdminBotsModal({ admin, bots, onClose, onBotAction, onViewInBotsTab }) 
                       </span>
                       <span>Created: {new Date(bot.created_at).toLocaleDateString()}</span>
                       <span className="font-mono text-gray-500">ID: {bot.id?.slice(0, 8)}</span>
+                      <span className="font-mono text-gray-400 bg-gray-900/80 px-1.5 py-0.5 rounded border border-gray-700/60 text-[11px]" title="This Telegram ID has /admin access in this bot">
+                        🔑 Admin: {bot.owner_user_id}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -292,7 +299,11 @@ export default function AdminTable({
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-gray-400 font-mono text-xs">
-                    <code>{admin.telegram_user_id || admin.user_id}</code>
+                    {admin.telegram_user_id && admin.telegram_user_id !== 0 ? (
+                      <code>{admin.telegram_user_id}</code>
+                    ) : (
+                      <span className="text-gray-500 italic">None (Web Only)</span>
+                    )}
                   </td>
 
                   {/* Limit Controller & View Bots Trigger */}

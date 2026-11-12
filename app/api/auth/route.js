@@ -72,8 +72,10 @@ export async function POST(request) {
     }
 
     // Create session for admin
+    const sessionUserId = user.telegram_user_id && user.telegram_user_id !== 0 ? user.telegram_user_id : user.id;
+
     const token = await createSession({
-      id: user.telegram_user_id,
+      id: sessionUserId,
       username: user.username,
       name: user.name || user.username,
       role: 'admin',
@@ -82,7 +84,7 @@ export async function POST(request) {
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user.telegram_user_id,
+        id: sessionUserId,
         username: user.username,
         name: user.name || user.username,
         role: 'admin',

@@ -35,10 +35,14 @@ export default function DashboardPage() {
       const data = await ec2Get('/bots');
       const allBots = data.bots || [];
 
-      // For non-owner, filter to own bots
+      // For non-owner, filter to bots created by them OR assigned to them
       const myBots = (me.role === 'owner'
         ? allBots
-        : allBots.filter((b) => String(b.owner_user_id) === String(me.id))
+        : allBots.filter(
+            (b) =>
+              String(b.creator_user_id || b.owner_user_id) === String(me.id) ||
+              String(b.owner_user_id) === String(me.id)
+          )
       ).map((b) => ({
         ...b,
         admin_username: me.username,
