@@ -21,15 +21,20 @@ export default function HostBotModal({ onClose, onSuccess, onToast, userId, isOw
       if (isOwner) {
         // Owner uses admin host endpoint
         const body = { token: token.trim() };
-        if (ownerUserId.trim()) body.owner_user_id = parseInt(ownerUserId.trim());
+        if (ownerUserId.trim()) {
+          body.owner_user_id = parseInt(ownerUserId.trim());
+        } else if (userId) {
+          body.owner_user_id = parseInt(userId);
+        }
         if (expiresAt) body.expires_at = expiresAt.replace('T', ' ') + ':00';
         data = await ec2Post('/bots/host', body);
       } else {
-        // Customer uses customer/host endpoint (enforces 1-bot limit)
+        // Customer uses customer/host endpoint (uses their own logged-in admin ID)
+        const myId = parseInt(userId);
         const body = {
           token: token.trim(),
-          admin_user_id: userId,
-          target_owner_id: ownerUserId.trim() ? parseInt(ownerUserId.trim()) : userId,
+          admin_user_id: myId,
+          target_owner_id: myId,
         };
         if (expiresAt) body.expires_at = expiresAt.replace('T', ' ') + ':00';
         data = await ec2Post('/customer/host', body);
@@ -70,23 +75,23 @@ export default function HostBotModal({ onClose, onSuccess, onToast, userId, isOw
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              {isOwner ? 'Admin User ID *' : 'Owner User ID (optional)'}
-            </label>
-            <input
-              type="number"
-              value={ownerUserId}
-              onChange={(e) => setOwnerUserId(e.target.value)}
-              placeholder={isOwner ? 'Bot admin ka Telegram User ID' : 'Kisi aur ki ID daalein ya khali chhodo'}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-telegram transition-colors text-sm"
-            />
-            <p className="text-xs text-gray-600 mt-1">
-              {isOwner
-                ? 'Jo user is bot ka admin banega uski Telegram User ID'
-                : 'Kisi aur ki ID daaldo agar unko admin banana hai, warna aapki ID auto lagegi'}
-            </p>
-          </div>
+          {isOwner && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Admin User ID (optional)
+              </label>
+              <input
+                type="number"
+                value={ownerUserId}
+                onChange={(e) => setOwnerUserId(e.target.value)}
+                placeholder="Telegram User ID (khali chhodo to aapka banega)"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-telegram transition-colors text-sm"
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                Jisko is bot ka admin banana hai uski Telegram User ID daalein (khali chhodne par aapka banega).
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">Expiry Date (optional)</label>
